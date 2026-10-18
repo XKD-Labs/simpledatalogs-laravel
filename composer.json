@@ -1,0 +1,68 @@
+{
+    "name": "simpledatalogs/laravel",
+    "description": "Send events, Eloquent model changes, auth events and Laravel log channels to simpledatalogs through a disk outbox, never blocking the app.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "analytics",
+        "events",
+        "logging",
+        "monolog",
+        "simpledatalogs"
+    ],
+    "homepage": "https://simpledatalogs.com/docs/sdks/laravel",
+    "authors": [
+        {
+            "name": "XKD Labs",
+            "email": "mail@xkdlabs.com",
+            "homepage": "https://simpledatalogs.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/XKD-Labs/simpledatalogs-laravel/issues",
+        "source": "https://github.com/XKD-Labs/simpledatalogs-laravel",
+        "docs": "https://simpledatalogs.com/docs/sdks/laravel"
+    },
+    "require": {
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.8",
+        "illuminate/console": "^11.0 || ^12.0",
+        "illuminate/http": "^11.0 || ^12.0",
+        "illuminate/support": "^11.0 || ^12.0",
+        "monolog/monolog": "^3.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0 || ^10.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "suggest": {
+        "illuminate/database": "For the TracksModelEvents trait",
+        "illuminate/auth": "For the auth event listener (SIMPLEDATALOGS_TRACK_AUTH)",
+        "illuminate/queue": "For SIMPLEDATALOGS_DELIVERY=queue"
+    },
+    "autoload": {
+        "psr-4": {
+            "SimpleDataLogs\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SimpleDataLogs\\Laravel\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SimpleDataLogs\\Laravel\\SimpleDataLogsServiceProvider"
+            ],
+            "aliases": {
+                "SimpleDataLogs": "SimpleDataLogs\\Laravel\\Facades\\SimpleDataLogs"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}
