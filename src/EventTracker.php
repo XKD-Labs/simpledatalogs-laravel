@@ -2,6 +2,8 @@
 
 namespace SimpleDataLogs\Laravel;
 
+use SimpleDataLogs\Laravel\Telemetry\Recorder;
+
 use Illuminate\Support\Str;
 
 /**
@@ -16,7 +18,7 @@ class EventTracker
     private ?string $userId = null;
 
     /**
-     * Keeps the outbox, the app environment and an optional resolver for the signed-in user's id.
+     * Keeps the outbox, the app environment, an optional resolver for the signed-in user's id and the telemetry recorder.
      *
      * @param \Closure(): (int|string|null)|null $currentUserIdResolver
      */
@@ -24,7 +26,26 @@ class EventTracker
         private Outbox $outbox,
         private string $appEnvironment,
         private ?\Closure $currentUserIdResolver = null,
+        private ?Recorder $recorder = null,
     ) {
+    }
+
+    /**
+     * Runs a callback as a custom span inside the current request, job, task or command, and returns its result.
+     * With telemetry off it only runs the callback; the callback's own exceptions still reach the app.
+     *
+     * @template TResult
+     * @param callable(): TResult $callback
+     * @param array<string, mixed> $props
+     * @return TResult
+     */
+    public function span(string $spanName, callable $callback, array $props = []): mixed
+    {
+        if ($this->recorder === null) {
+            return $callback();
+        }
+
+        return $this->recorder->span($spanName, $callback, $props);
     }
 
     /**

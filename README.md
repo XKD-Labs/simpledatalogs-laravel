@@ -1,6 +1,6 @@
 # simpledatalogs/laravel
 
-Sends events, Eloquent model changes, sign-ins and Laravel log channels to [simpledatalogs](https://simpledatalogs.com) as NDJSON with `event_id` and `ts`, so retries count once.
+Sends events, Eloquent model changes, sign-ins, Laravel log channels and telemetry (requests, jobs, scheduled tasks, commands, queries, outgoing HTTP, cache, mail and exceptions) to [simpledatalogs](https://simpledatalogs.com) as NDJSON with `event_id` and `ts`, so retries count once.
 Everything only appends to a disk outbox, shipped after each response (or by a queue job, or the scheduled command), so requests never wait on the network.
 Full guide: [simpledatalogs.com/docs/sdks/laravel](https://simpledatalogs.com/docs/sdks/laravel).
 
@@ -69,6 +69,62 @@ Add a tap beside the channel's own file; its parameter names the channel, becaus
     'tap' => [\SimpleDataLogs\Laravel\ForwardToSimpleDataLogs::class . ':partner_api'],
 ],
 ```
+
+## Telemetry (on by default)
+
+Once `SIMPLEDATALOGS_KEY` is set, the package records every request, queued job, scheduled task and Artisan command, with no code to add. Each one becomes **one line** (a bundle) in the same outbox, written when it ends, carrying its queries, outgoing HTTP calls, cache counts, mail, notifications and exceptions. A request with everything inside it is usually one event.
+
+Turn it all off with one line:
+
+```dotenv
+SIMPLEDATALOGS_TELEMETRY=false
+```
+
+| Signal | Sent | Switch (`telemetry.*`) |
+|---|---|---|
+| Requests | Method, route pattern (`GET /orders/{order}`), route name, status, duration, peak memory, user id | `requests` |
+| Queries | SQL with `?` placeholders and the connection; identical SQL folds into one child with a `count`, summed time and `max_ms` (the N+1 signal) | `queries` |
+| Outgoing HTTP | `METHOD host`, status, duration (Laravel's HTTP client) | `http` |
+| Cache | Hit, miss, write and forget counts per store | `cache` |
+| Mail, notifications | Class name, channel, duration | `mail`, `notifications` |
+| Jobs | Class, queue, connection, attempts, duration, status; joined to the trace of the request that dispatched it | `jobs` |
+| Scheduled tasks | Command line, cron expression, `interval_s`, duration, status, skipped runs | `tasks` |
+| Commands | Name, exit code, duration (the ship command, the scheduler and long-running workers are skipped: `ignore_commands`) | `commands` |
+| Exceptions | Type, message, handled or not, up to 50 frames (`in_app` for `app/`, `routes/`, `database/`) | `exceptions` |
+| Logs | Every log record gets `trace_id` and `span_id`, so log lines link to their request or job | `logs` |
+
+Each switch also reads an environment variable, for example `SIMPLEDATALOGS_TELEMETRY_QUERIES=false`.
+
+**Never sent:** query bindings and SQL literals, headers, cookies, request and response bodies, query strings and URL paths of outgoing calls, mail addresses, subjects and bodies, notification payloads, command arguments. Route parameters stay as `{name}` in the pattern. Cache keys are off by default; `SIMPLEDATALOGS_TELEMETRY_CACHE_KEYS=true` sends key patterns with digits and hashes replaced by `*`. `drop_context_keys` applies to telemetry props too.
+
+### Traces
+
+Every entry point gets a W3C trace id. An incoming `traceparent` header joins the caller's trace, and a job dispatched during a request carries the trace in its payload (`__sdl_trace`), so the job shows up under the request. Custom spans:
+
+```php
+$pdf = SimpleDataLogs::span('render-pdf', fn () => $renderer->render($invoice), ['pages' => 3]);
+```
+
+### Sampling
+
+Every root is sent with exact totals (`summary`) and its exceptions. Its children (the waterfall) go out when it is slow, errored, or one time in `detail_every`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SIMPLEDATALOGS_SLOW_REQUEST_MS` | `500` | Requests slower than this always send their children |
+| `SIMPLEDATALOGS_SLOW_JOB_MS` | `5000` | The same for jobs, tasks and commands |
+| `SIMPLEDATALOGS_DETAIL_EVERY` | `10` | Other roots send their children one time in this many |
+| `SIMPLEDATALOGS_SAMPLE_RATE` | `1` | Below 1, keeps that share of roots with a matching `sample_weight`; slow and errored roots are always kept |
+
+### Release and grouping
+
+Bundles carry a `release`: `SIMPLEDATALOGS_RELEASE`, else the deployed git SHA (a `REVISION` file, else `.git/HEAD`), else `APP_VERSION`. To group exceptions your way, set `fingerprint` in `config/simpledatalogs.php` to a callable (or an invokable class name) that takes the `Throwable` and returns a string.
+
+### Limits
+
+At most 60 children per bundle after folding (the rest fold into one `(other)` child per kind), 5 exceptions, 50 frames and 8 KB per stack, 100 props, and 64 KB per bundle (over it, the children are dropped and the summary kept). Recording appends to memory and writes one line per entry point; it costs well under half a millisecond for a request with 20 queries and never throws.
+
+Octane works as is: Octane's request events mark where each request starts and ends. Queued jobs write their bundle as soon as they finish; for busy queue workers, schedule `simpledatalogs:ship` (below) so those lines leave promptly.
 
 ## Sending: no cron needed
 

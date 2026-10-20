@@ -42,9 +42,16 @@ class LineBuilder
         $props["channel"] = $channelName ?? $record->channel;
         $props["app_env"] = $this->appEnvironment;
 
+        // Trace ids from the trace processor become top-level fields, so the line links to its trace.
+        $traceFields = array_filter(
+            array_intersect_key($record->extra, ["trace_id" => true, "span_id" => true]),
+            fn (mixed $traceId): bool => is_string($traceId) && $traceId !== "",
+        );
+        $extra = array_diff_key($record->extra, $traceFields);
+
         // Extra (processors' output) goes under its own key, so it never hides a context value.
-        if ($record->extra !== []) {
-            $props["extra"] = $record->extra;
+        if ($extra !== []) {
+            $props["extra"] = $extra;
         }
 
         $line = [
@@ -52,8 +59,10 @@ class LineBuilder
             "ts" => $record->datetime->format("Y-m-d\\TH:i:s.vP"),
             "level" => strtolower($record->level->getName()),
             "message" => $record->message,
-            "props" => $props,
         ];
+
+        $line += $traceFields;
+        $line["props"] = $props;
 
         $encodedLine = $this->encode($line);
 

@@ -1,6 +1,6 @@
 {
     "name": "simpledatalogs/laravel",
-    "description": "Send events, Eloquent model changes, auth events and Laravel log channels to simpledatalogs through a disk outbox, never blocking the app.",
+    "description": "Send events, Eloquent model changes, auth events, Laravel log channels and request, job and query telemetry to simpledatalogs through a disk outbox, never blocking the app.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -9,7 +9,10 @@
         "events",
         "logging",
         "monolog",
-        "simpledatalogs"
+        "simpledatalogs",
+        "telemetry",
+        "tracing",
+        "apm"
     ],
     "homepage": "https://simpledatalogs.com/docs/sdks/laravel",
     "authors": [
