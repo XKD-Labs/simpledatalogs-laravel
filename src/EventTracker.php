@@ -18,7 +18,8 @@ class EventTracker
     private ?string $userId = null;
 
     /**
-     * Keeps the outbox, the app environment, an optional resolver for the signed-in user's id and the telemetry recorder.
+     * Keeps the outbox, the app environment, an optional resolver for the signed-in user's id, the telemetry recorder,
+     * and whether this process is a queue worker or command, whose events say `app_state: background`.
      *
      * @param \Closure(): (int|string|null)|null $currentUserIdResolver
      */
@@ -27,6 +28,7 @@ class EventTracker
         private string $appEnvironment,
         private ?\Closure $currentUserIdResolver = null,
         private ?Recorder $recorder = null,
+        private bool $isBackgroundProcess = false,
     ) {
     }
 
@@ -79,7 +81,9 @@ class EventTracker
                 $line["user_id"] = $resolvedUserId;
             }
 
-            $line["props"] = array_merge($this->scalarProps($props), ["app_env" => $this->appEnvironment]);
+            // Jobs and commands run with nobody at the screen, so their events are passive unless the caller says otherwise.
+            $backgroundProps = $this->isBackgroundProcess ? ["app_state" => "background"] : [];
+            $line["props"] = array_merge($backgroundProps, $this->scalarProps($props), ["app_env" => $this->appEnvironment]);
 
             $this->outbox->append(json_encode($line, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR));
         } catch (\Throwable $error) {

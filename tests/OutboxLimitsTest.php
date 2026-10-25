@@ -49,6 +49,14 @@ class OutboxLimitsTest extends PlainTestCase
     }
 
     /**
+     * Points error_log at the test's file from inside the test body, where PHPUnit 12 sets its own capture around each test.
+     */
+    private function captureErrorLog(): void
+    {
+        ini_set("error_log", $this->errorLogPath);
+    }
+
+    /**
      * A shipper on the fake clock whose sleeps advance it.
      */
     private function shipper(Outbox $outbox, Transport $transport, int $batchLines = 50): Shipper
@@ -97,6 +105,7 @@ class OutboxLimitsTest extends PlainTestCase
 
     public function test_an_outage_never_grows_the_outbox_past_its_cap_and_the_oldest_unsent_lines_go(): void
     {
+        $this->captureErrorLog();
         $outbox = new Outbox($this->outboxPath, maxOutboxBytes: 1_000_000, maxFileBytes: 200_000);
         $transport = new FakeTransport(array_fill(0, 10_000, ["status" => 503, "retry_after" => null]));
 
@@ -217,6 +226,7 @@ class OutboxLimitsTest extends PlainTestCase
 
     public function test_a_415_moves_the_batch_aside_logs_once_and_sends_the_next(): void
     {
+        $this->captureErrorLog();
         $outbox = new Outbox($this->outboxPath);
 
         foreach (range(1, 20) as $lineNumber) {

@@ -8,6 +8,8 @@ Telemetry: requests, jobs, scheduled tasks and commands, auto-instrumented. **On
 
 ### Added
 
+- Laravel 13 support (`illuminate/*` ^13, `orchestra/testbench` ^11, PHPUnit 12); Laravel 13 needs PHP 8.3+.
+- Events tracked from a queue worker, an Artisan command or the scheduler carry `app_state: background`, so dashboards count them as passive sessions; the caller's own `app_state` wins.
 - One bundle per request, queued job, scheduled task and Artisan command, written to the existing outbox when it ends, with its queries, outgoing HTTP calls, cache counts, mail, notifications and exceptions.
 - Identical SQL folds into one child with a count, summed duration and `max_ms`; bindings and SQL literals are never sent.
 - W3C trace ids: an incoming `traceparent` joins the caller's trace, and queued jobs carry the dispatching request's trace in their payload.

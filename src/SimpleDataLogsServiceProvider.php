@@ -76,6 +76,7 @@ class SimpleDataLogsServiceProvider extends ServiceProvider
             appEnvironment: (string) config("app.env"),
             currentUserIdResolver: config("simpledatalogs.track_auth_events") ? $this->signedInUserIdResolver() : null,
             recorder: $this->isTelemetryOn() ? $app->make(Recorder::class) : null,
+            isBackgroundProcess: $this->isBackgroundProcess(),
         ));
 
         $this->app->singleton(Shipper::class, fn ($app): Shipper => new Shipper(
@@ -324,6 +325,15 @@ class SimpleDataLogsServiceProvider extends ServiceProvider
         } catch (\Throwable $error) {
             error_log("[simpledatalogs] telemetry was not written at termination: " . $error->getMessage());
         }
+    }
+
+    /**
+     * True in a queue worker, a command or the scheduler, where nobody is at the screen.
+     */
+    private function isBackgroundProcess(): bool
+    {
+        // Octane serves requests from a console process, so it never counts.
+        return $this->app->runningInConsole() && ! $this->app->runningUnitTests() && ! $this->isOctane();
     }
 
     /**

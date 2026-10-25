@@ -4,7 +4,7 @@ Sends events, Eloquent model changes, sign-ins, Laravel log channels and telemet
 Everything only appends to a disk outbox, shipped after each response (or by a queue job, or the scheduled command), so requests never wait on the network.
 Full guide: [simpledatalogs.com/docs/sdks/laravel](https://simpledatalogs.com/docs/sdks/laravel).
 
-Requires PHP 8.2+ and Laravel 11 or 12.
+Requires PHP 8.2+ and Laravel 11, 12 or 13 (Laravel 13 needs PHP 8.3+).
 
 ## Install
 
@@ -26,6 +26,8 @@ SimpleDataLogs::track('signup', ['plan' => 'pro', 'seats' => 3]);
 ```
 
 Each event gets an `event_id` and `ts` now, `props.app_env`, and the user's id when one is known (`userId:` argument, `SimpleDataLogs::setUserId()`, or the auth listener below). Props must be strings, numbers or booleans (backed enums send their value); anything else is skipped. `track()` only appends to the disk outbox and never throws.
+
+Events tracked from a queue worker, an Artisan command or the scheduler also carry `props.app_state: background`, so the Sessions tab counts them as passive; pass your own `app_state` to override it. Web requests and Octane carry none.
 
 ## Model events (opt-in)
 

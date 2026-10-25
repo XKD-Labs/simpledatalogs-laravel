@@ -95,6 +95,18 @@ class EventTrackingTest extends TestCase
         $this->assertSame(["plan" => "pro", "seats" => 3, "is_trial" => true, "app_env" => "testing"], $line["props"]);
     }
 
+    public function test_events_from_a_worker_or_command_say_background_unless_the_caller_says_otherwise(): void
+    {
+        $tracker = new EventTracker($this->app->make(Outbox::class), "testing", isBackgroundProcess: true);
+
+        $tracker->track("invoice_sent", ["plan" => "pro"]);
+        $tracker->track("user_returned", ["app_state" => "active"]);
+
+        $lines = $this->queuedLines();
+        $this->assertSame(["app_state" => "background", "plan" => "pro", "app_env" => "testing"], $lines[0]["props"]);
+        $this->assertSame("active", $lines[1]["props"]["app_state"]);
+    }
+
     public function test_a_tracked_model_sends_created_updated_deleted_and_restored_with_names_not_values(): void
     {
         $order = Order::query()->create(["status" => "new", "note" => "leave at the door", "card_token" => "tok_secret"]);
