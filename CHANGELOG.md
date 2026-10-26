@@ -2,7 +2,7 @@
 
 All notable changes to the `simpledatalogs/laravel` package. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package uses [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-10-26
 
 Telemetry: requests, jobs, scheduled tasks and commands, auto-instrumented. **On by default** once `SIMPLEDATALOGS_KEY` is set; `SIMPLEDATALOGS_TELEMETRY=false` turns it off.
 
@@ -21,7 +21,7 @@ Telemetry: requests, jobs, scheduled tasks and commands, auto-instrumented. **On
 - One switch per signal under `telemetry.*`, and `ignore_commands` and `ignore_jobs` lists.
 - Octane support through Octane's request events.
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-10-19
 
 The first public release.
 
